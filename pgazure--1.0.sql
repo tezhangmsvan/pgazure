@@ -7,11 +7,17 @@ COMMENT ON FUNCTION blob_storage_list_blobs(text,text,text)
 
 CREATE FUNCTION blob_storage_get_blob(connection_string text, container_name text, path text)
     RETURNS SETOF record
-    LANGUAGE C STRICT
+    LANGUAGE C
     AS 'MODULE_PATHNAME', $$blob_storage_get_blob$$;
 COMMENT ON FUNCTION blob_storage_get_blob(text,text,text)
     IS 'get a blob from blob storage';
 
+CREATE FUNCTION blob_storage_get_blob(connection_string text, container_name text, path text, rec anyelement)
+    RETURNS SETOF anyelement
+    LANGUAGE C
+    AS 'MODULE_PATHNAME', $$blob_storage_get_blob_anyelement$$;
+COMMENT ON FUNCTION blob_storage_get_blob(text,text,text,anyelement)
+    IS 'get a blob from blob storage';
 
 CREATE FUNCTION blob_storage_put_blob_sfunc(state internal, connection_string text, container_name text, path text, tuple record)
 RETURNS internal 
