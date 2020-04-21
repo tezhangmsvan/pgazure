@@ -44,7 +44,7 @@ SELECT * FROM azure.blob_storage_list_blobs('...','pgazure','customer_reviews');
 The `blob_storage_get_blob` function retrieves a file from blob storage (currently only uncompressed CSV). You need to specify the columns as they appear in the file when querying in order for `blob_storage_get_blob` to correctly parse the data.
 
 ```sql
-SELECT count(*) FROM azure.blob_storage_get_blob('...','pgazure','customer_reviews_copy.csv') AS res (
+SELECT * FROM azure.blob_storage_get_blob('...','pgazure','customer_reviews_copy.csv') AS res (
   customer_id TEXT,
   review_date DATE,
   review_rating INTEGER,
@@ -56,7 +56,17 @@ SELECT count(*) FROM azure.blob_storage_get_blob('...','pgazure','customer_revie
   product_group TEXT,
   product_category TEXT,
   product_subcategory TEXT,
-  similar_product_ids CHAR(10)[]);
+  similar_product_ids CHAR(10)[])
+  LIMIT 3;
+ LIMIT 3;                                                                                                                                              
+┌───────────────┬─────────────┬───────────────┬──────────────┬──────────────────────┬────────────┬────────────────────────────────────────────┬────────────────────┬───────────────
+│  customer_id  │ review_date │ review_rating │ review_votes │ review_helpful_votes │ product_id │               product_title                │ product_sales_rank │ product_group
+├───────────────┼─────────────┼───────────────┼──────────────┼──────────────────────┼────────────┼────────────────────────────────────────────┼────────────────────┼───────────────
+│ AE22YDHSBFYIP │ 1970-12-30  │             5 │           10 │                    0 │ 1551803542 │ Start and Run a Coffee Bar (Start & Run a) │              11611 │ Book         
+│ AE22YDHSBFYIP │ 1970-12-30  │             5 │            9 │                    0 │ 1551802538 │ Start and Run a Profitable Coffee Bar      │             689262 │ Book         
+│ ATVPDKIKX0DER │ 1995-06-19  │             4 │           19 │                   18 │ 0898624932 │ The Power of Maps                          │             407473 │ Book         
+└───────────────┴─────────────┴───────────────┴──────────────┴──────────────────────┴────────────┴────────────────────────────────────────────┴────────────────────┴───────────────
+(3 rows)
 ```
 
 The `blob_storage_put_blob` aggregate writes a set of records to a file in blob storage (currently only uncompressed CSV).
