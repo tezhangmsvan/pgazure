@@ -57,7 +57,6 @@ SELECT * FROM azure.blob_storage_get_blob('...','pgazure','customer_reviews_copy
   product_category TEXT,
   product_subcategory TEXT,
   similar_product_ids CHAR(10)[])
-  LIMIT 3;
  LIMIT 3;                                                                                                                                              
 ┌───────────────┬─────────────┬───────────────┬──────────────┬──────────────────────┬────────────┬────────────────────────────────────────────┬────────────────────┬───────────────
 │  customer_id  │ review_date │ review_rating │ review_votes │ review_helpful_votes │ product_id │               product_title                │ product_sales_rank │ product_group
