@@ -81,5 +81,5 @@ SELECT * FROM azure.blob_storage_get_blob('...','pgazure','customer_reviews_1998
 
 The `blob_storage_put_blob` aggregate writes a set of records to a file in blob storage (currently only uncompressed CSV).
 ```sql
-SELECT azure.blob_storage_put_blob('...','pgazure','my_table.csv', my_table) FROM my_table;
+SELECT azure.blob_storage_put_blob('...','pgazure','customer_reviews_all.csv', customer_reviews) FROM customer_reviews;
 ```
