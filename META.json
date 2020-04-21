@@ -1,0 +1,49 @@
+{
+    "name": "pgazure",
+    "abstract": "Azure integration for PostgreSQL",
+    "description": "PostgreSQL functions for integrating with Azure",
+    "version": "1.0",
+    "maintainer": "\"Marco Slot\" <marco@citusdata.com>",
+    "license": {
+		"PostgreSQL": "http://www.postgresql.org/about/licence"
+	},
+    "prereqs": {
+       "runtime": {
+          "requires": {
+             "PostgreSQL": "9.5.0"
+          }
+       }
+    },
+    "provides": {
+        "pgazure": {
+            "abstract": "Azure integration for PostgreSQL",
+            "file": "pgazure--1.0.sql",
+            "docfile": "README.md",
+            "version": "1.0"
+        }
+    },
+    "release_status": "stable",
+    "resources": {
+        "homepage": "https://citusdata.com/",
+        "bugtracker": {
+            "web": "https://github.com/citusdata/pgazure/issues",
+            "mailto": "support@citusdata.com"
+        },
+        "repository": {
+          "url":  "git://github.com/citusdata/pgazure.git",
+          "web":  "https://github.com/citusdata/pgazure",
+          "type": "git"
+        }
+    },
+
+    "generated_by": "\"Marco Slot\" <marco@citusdata.com>",
+
+    "tags": [
+        "Azure"
+    ],
+
+    "meta-spec": {
+        "version": "1.0.0",
+        "url": "http://pgxn.org/meta/spec.txt"
+    }
+}
