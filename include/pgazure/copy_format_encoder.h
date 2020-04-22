@@ -97,10 +97,9 @@ typedef struct CopyFormatEncoder
 CopyFormatEncoder * CopyFormatEncoderCreate(ByteSink *byteSink,
                                             TupleDesc tupleDescriptor,
                                             List *copyOptions);
-void CopyFormatEncoderStart(CopyFormatEncoder *encoder);
-void CopyFormatEncoderPush(CopyFormatEncoder *encoder, Datum *columnValues,
-                           bool *columnNulls);
-void CopyFormatEncoderFinish(CopyFormatEncoder *encoder);
+void CopyFormatEncoderStart(void *state);
+void CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls);
+void CopyFormatEncoderFinish(void *state);
 
 
 #endif

@@ -8,7 +8,7 @@
 #include "nodes/makefuncs.h"
 #include "pgazure/blob_storage.h"
 #include "pgazure/byte_io.h"
-#include "pgazure/copy_format_encoder.h"
+#include "pgazure/codecs.h"
 #include "storage/itemptr.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
@@ -26,56 +26,60 @@ typedef struct
 	MemoryContext rowContext;
 	Datum *values;
 	bool *nulls;
-	CopyFormatEncoder *encoder;
-	ByteSink *byteSink;
+	TupleEncoder *encoder;
 } BlobStoragePutBlobState;
 
 
 Datum
 blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 {
-	BlobStoragePutBlobState *state =
+	BlobStoragePutBlobState *aggregateState =
 		(BlobStoragePutBlobState *) PG_GETARG_POINTER(0);
 	HeapTupleHeader rec = PG_GETARG_HEAPTUPLEHEADER(4);
 
-	if (state == NULL)
+	if (aggregateState == NULL)
 	{
-		MemoryContext agg_context;
-		MemoryContext old_context;
+		MemoryContext aggContext;
+		MemoryContext oldContext;
 
 		char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(1));
 		char *containerName = text_to_cstring(PG_GETARG_TEXT_P(2));
 		char *path = text_to_cstring(PG_GETARG_TEXT_P(3));
+		char *encoderString = "csv";
 
-		if (!AggCheckCallContext(fcinfo, &agg_context))
+		if (PG_NARGS() > 5)
+		{
+			encoderString = text_to_cstring(PG_GETARG_TEXT_P(5));
+		}
+
+		if (!AggCheckCallContext(fcinfo, &aggContext))
 		{
 			elog(ERROR, "aggregate function called in non-aggregate context");
 		}
 
-		old_context = MemoryContextSwitchTo(agg_context);
-		state = palloc0(sizeof(BlobStoragePutBlobState));
+		oldContext = MemoryContextSwitchTo(aggContext);
+		aggregateState = palloc0(sizeof(BlobStoragePutBlobState));
 
 		Oid tupType = HeapTupleHeaderGetTypeId(rec);
 		int32 tupTypmod = HeapTupleHeaderGetTypMod(rec);
-		state->tupleDescriptor = lookup_rowtype_tupdesc(tupType, tupTypmod);
+		aggregateState->tupleDescriptor = lookup_rowtype_tupdesc(tupType, tupTypmod);
 
-		int natts = state->tupleDescriptor->natts;
-		state->values = palloc(natts * sizeof(Datum));
-		state->nulls = (bool *) palloc(natts * sizeof(bool));
+		int natts = aggregateState->tupleDescriptor->natts;
+		aggregateState->values = palloc(natts * sizeof(Datum));
+		aggregateState->nulls = (bool *) palloc(natts * sizeof(bool));
 
 		ByteSink *byteSink = palloc0(sizeof(ByteSink));
 		WriteBlockBlob(connectionString, containerName, path, byteSink);
 
-		DefElem *formatResultOption = makeDefElem("format", (Node *) makeString("csv"), -1);
-		List *copyOptions = list_make1(formatResultOption);
+		TupleEncoder *encoder = BuildTupleEncoder(encoderString,
+												  aggregateState->tupleDescriptor,
+		                                          byteSink);
 
-		state->encoder = CopyFormatEncoderCreate(byteSink, state->tupleDescriptor,
-		                                         copyOptions);
-		CopyFormatEncoderStart(state->encoder);
+		encoder->start(encoder->state);
 
-		state->byteSink = byteSink;
+		aggregateState->encoder = encoder;
 
-		MemoryContextSwitchTo(old_context);
+		MemoryContextSwitchTo(oldContext);
 	}
 
 	HeapTupleData tuple;
@@ -84,26 +88,27 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 	tuple.t_tableOid = InvalidOid;
 	tuple.t_data = rec;
 
-	TupleDesc tupleDesc = state->tupleDescriptor;
-	Datum *values = state->values;
-	bool *nulls = state->nulls;
+	TupleDesc tupleDesc = aggregateState->tupleDescriptor;
+	Datum *values = aggregateState->values;
+	bool *nulls = aggregateState->nulls;
 	heap_deform_tuple(&tuple, tupleDesc, values, nulls);
 
-	CopyFormatEncoderPush(state->encoder, values, nulls);
+	aggregateState->encoder->push(aggregateState->encoder->state, values, nulls);
 
-	PG_RETURN_POINTER(state);
+	PG_RETURN_POINTER(aggregateState);
 }
 
 
 Datum
 blob_storage_put_blob_final(PG_FUNCTION_ARGS)
 {
-	BlobStoragePutBlobState *state =
+	BlobStoragePutBlobState *aggregateState =
 		(BlobStoragePutBlobState *) PG_GETARG_POINTER(0);
+	TupleEncoder *encoder = aggregateState->encoder;
 
-	CopyFormatEncoderFinish(state->encoder);
+	encoder->finish(encoder->state);
 
-	ReleaseTupleDesc(state->tupleDescriptor);
+	ReleaseTupleDesc(aggregateState->tupleDescriptor);
 
 	PG_RETURN_VOID();
 }

@@ -5,22 +5,28 @@ CREATE FUNCTION blob_storage_list_blobs(connection_string text, container_name t
 COMMENT ON FUNCTION blob_storage_list_blobs(text,text,text)
     IS 'list blobs in blob storage';
 
-CREATE FUNCTION blob_storage_get_blob(connection_string text, container_name text, path text)
+CREATE FUNCTION blob_storage_get_blob(connection_string text, container_name text, path text, decoder text default 'auto')
     RETURNS SETOF record
     LANGUAGE C
     AS 'MODULE_PATHNAME', $$blob_storage_get_blob$$;
-COMMENT ON FUNCTION blob_storage_get_blob(text,text,text)
+COMMENT ON FUNCTION blob_storage_get_blob(text,text,text,text)
     IS 'get a blob from blob storage';
 
-CREATE FUNCTION blob_storage_get_blob(connection_string text, container_name text, path text, rec anyelement)
+CREATE FUNCTION blob_storage_get_blob(connection_string text, container_name text, path text, rec anyelement, decoder text default 'auto')
     RETURNS SETOF anyelement
     LANGUAGE C
     AS 'MODULE_PATHNAME', $$blob_storage_get_blob_anyelement$$;
-COMMENT ON FUNCTION blob_storage_get_blob(text,text,text,anyelement)
+COMMENT ON FUNCTION blob_storage_get_blob(text,text,text,anyelement,text)
     IS 'get a blob from blob storage';
 
 CREATE FUNCTION blob_storage_put_blob_sfunc(state internal, connection_string text, container_name text, path text, tuple record)
-RETURNS internal 
+RETURNS internal
+LANGUAGE C
+CALLED ON NULL INPUT
+AS 'MODULE_PATHNAME', $$blob_storage_put_blob_sfunc$$;
+
+CREATE FUNCTION blob_storage_put_blob_sfunc(state internal, connection_string text, container_name text, path text, tuple record, encoder text)
+RETURNS internal
 LANGUAGE C
 CALLED ON NULL INPUT
 AS 'MODULE_PATHNAME', $$blob_storage_put_blob_sfunc$$;
@@ -31,6 +37,12 @@ LANGUAGE C STRICT
 AS 'MODULE_PATHNAME', $$blob_storage_put_blob_final$$;
 
 CREATE AGGREGATE blob_storage_put_blob(connection_string text, container_name text, path text, tuple record) (
+    stype=internal,
+    sfunc=blob_storage_put_blob_sfunc,
+    finalfunc=blob_storage_put_blob_final
+);
+
+CREATE AGGREGATE blob_storage_put_blob(connection_string text, container_name text, path text, tuple record, encoder text) (
     stype=internal,
     sfunc=blob_storage_put_blob_sfunc,
     finalfunc=blob_storage_put_blob_final

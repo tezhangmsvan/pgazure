@@ -28,17 +28,12 @@ typedef struct CopyFormatDecoder
 } CopyFormatDecoder;
 
 
-void DecodeCopyFormatByteSourceIntoTupleStore(ByteSource *byteSource,
-                                              Tuplestorestate *tupleStore,
-                                              TupleDesc tupleDescriptor,
-                                              List *copyOptions);
 CopyFormatDecoder * CopyFormatDecoderCreate(ByteSource *byteSource,
 											TupleDesc tupleDescriptor,
 											List *copyOptions);
-void CopyFormatDecoderStart(CopyFormatDecoder *decoder);
-bool CopyFormatDecoderNext(CopyFormatDecoder *decoder, Datum *columnValues,
-                           bool *columnNulls);
-void CopyFormatDecoderFinish(CopyFormatDecoder *decoder);
+void CopyFormatDecoderStart(void *state);
+bool CopyFormatDecoderNext(void *state, Datum *columnValues, bool *columnNulls);
+void CopyFormatDecoderFinish(void *state);
 
 
 #endif

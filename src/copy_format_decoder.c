@@ -28,32 +28,6 @@ static List * TupleDescColumnNameList(TupleDesc tupleDescriptor);
 static List * ColumnNameListToCopyStmtAttributeList(List *columnNameList);
 
 
-void
-DecodeCopyFormatByteSourceIntoTupleStore(ByteSource *byteSource,
-										 Tuplestorestate *tupleStore,
-										 TupleDesc tupleDescriptor,
-										 List *copyOptions)
-{
-	int columnCount = tupleDescriptor->natts;
-	Datum *columnValues = palloc0(columnCount * sizeof(Datum));
-	bool *columnNulls = palloc0(columnCount * sizeof(bool));
-
-	CopyFormatDecoder *decoder = CopyFormatDecoderCreate(byteSource, tupleDescriptor,
-	                                                     copyOptions);
-
-	CopyFormatDecoderStart(decoder);
-
-	while (CopyFormatDecoderNext(decoder, columnValues, columnNulls))
-	{
-		tuplestore_putvalues(tupleStore, tupleDescriptor, columnValues, columnNulls);
-
-		CHECK_FOR_INTERRUPTS();
-	}
-
-	CopyFormatDecoderFinish(decoder);
-}
-
-
 CopyFormatDecoder *
 CopyFormatDecoderCreate(ByteSource *byteSource, TupleDesc tupleDescriptor,
 						List *copyOptions)
@@ -68,8 +42,9 @@ CopyFormatDecoderCreate(ByteSource *byteSource, TupleDesc tupleDescriptor,
 
 
 void
-CopyFormatDecoderStart(CopyFormatDecoder *decoder)
+CopyFormatDecoderStart(void *state)
 {
+	CopyFormatDecoder *decoder = (CopyFormatDecoder *) state;
 	CurrentByteSource = decoder->byteSource;
 
 	Relation stubRelation = StubRelation(decoder->tupleDescriptor);
@@ -85,8 +60,9 @@ CopyFormatDecoderStart(CopyFormatDecoder *decoder)
 
 
 bool
-CopyFormatDecoderNext(CopyFormatDecoder *decoder, Datum *columnValues, bool *columnNulls)
+CopyFormatDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 {
+	CopyFormatDecoder *decoder = (CopyFormatDecoder *) state;
 	EState *executorState = decoder->executorState;
 	MemoryContext executorTupleContext = GetPerTupleMemoryContext(executorState);
 	ExprContext *executorExpressionContext = GetPerTupleExprContext(executorState);
@@ -123,8 +99,10 @@ ReadFromCurrentByteSource(void *outBuf, int minRead, int maxRead)
 
 
 void
-CopyFormatDecoderFinish(CopyFormatDecoder *decoder)
+CopyFormatDecoderFinish(void *state)
 {
+	CopyFormatDecoder *decoder = (CopyFormatDecoder *) state;
+
 	EndCopyFrom(decoder->copyState);
 
 	CurrentByteSource->close(CurrentByteSource->context);

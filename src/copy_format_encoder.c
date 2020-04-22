@@ -62,8 +62,9 @@ CopyFormatEncoderCreate(ByteSink *byteSink, TupleDesc tupleDescriptor,
 
 
 void
-CopyFormatEncoderStart(CopyFormatEncoder *encoder)
+CopyFormatEncoderStart(void *state)
 {
+	CopyFormatEncoder *encoder = (CopyFormatEncoder *) state;
 	ByteSink *byteSink = encoder->byteSink;
 	CopyOutState copyOutState = (CopyOutState) palloc0(sizeof(CopyOutStateData));
 
@@ -104,8 +105,9 @@ CopyFormatEncoderStart(CopyFormatEncoder *encoder)
 
 
 void
-CopyFormatEncoderPush(CopyFormatEncoder *encoder, Datum *columnValues, bool *columnNulls)
+CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 {
+	CopyFormatEncoder *encoder = (CopyFormatEncoder *) state;
 	ByteSink *byteSink = encoder->byteSink;
 	TupleDesc tupleDescriptor = encoder->tupleDescriptor;
 	CopyOutState copyOutState = encoder->copyOutState;
@@ -122,8 +124,9 @@ CopyFormatEncoderPush(CopyFormatEncoder *encoder, Datum *columnValues, bool *col
 
 
 void
-CopyFormatEncoderFinish(CopyFormatEncoder *encoder)
+CopyFormatEncoderFinish(void *state)
 {
+	CopyFormatEncoder *encoder = (CopyFormatEncoder *) state;
 	ByteSink *byteSink = encoder->byteSink;
 	CopyOutState copyOutState = encoder->copyOutState;
 
