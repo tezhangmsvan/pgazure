@@ -82,7 +82,7 @@ typedef struct CopyCoercionData
 	Oid typioparam; /* inputFunction has an extra param */
 } CopyCoercionData;
 
-typedef struct CopyFormatEncoder
+typedef struct CopyFormatEncoderState
 {
 	ByteSink *byteSink;
 	TupleDesc tupleDescriptor;
@@ -90,13 +90,12 @@ typedef struct CopyFormatEncoder
 
 	CopyOutState copyOutState;
 	FmgrInfo *columnOutputFunctions;
-} CopyFormatEncoder;
+} CopyFormatEncoderState;
 
 
 
-CopyFormatEncoder * CopyFormatEncoderCreate(ByteSink *byteSink,
-                                            TupleDesc tupleDescriptor,
-                                            List *copyOptions);
+TupleEncoder * CreateCopyFormatEncoder(ByteSink *byteSink, TupleDesc tupleDescriptor,
+                                       List *copyOptions);
 void CopyFormatEncoderStart(void *state);
 void CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls);
 void CopyFormatEncoderFinish(void *state);

@@ -8,6 +8,7 @@
 #include "mb/pg_wchar.h"
 #include "nodes/execnodes.h"
 #include "pgazure/byte_io.h"
+#include "pgazure/codecs.h"
 #include "pgazure/copy_format_encoder.h"
 #include "pgazure/copy_utils.h"
 #include "utils/builtins.h"
@@ -49,14 +50,21 @@ static void CopyFlushOutput(CopyOutState cstate, char *start, char *pointer);
 static void ProcessCopyOutOptions(CopyOutState cstate, List *options);
 
 
-CopyFormatEncoder *
-CopyFormatEncoderCreate(ByteSink *byteSink, TupleDesc tupleDescriptor,
-						List *copyOptions)
+TupleEncoder *
+CreateCopyFormatEncoder(ByteSink *byteSink, TupleDesc tupleDescriptor,
+                        List *copyOptions)
 {
-	CopyFormatEncoder *encoder = palloc0(sizeof(CopyFormatEncoder));
-	encoder->byteSink = byteSink;
-	encoder->copyOptions = copyOptions;
-	encoder->tupleDescriptor = tupleDescriptor;
+	CopyFormatEncoderState *state = palloc0(sizeof(CopyFormatEncoderState));
+	state->byteSink = byteSink;
+	state->copyOptions = copyOptions;
+	state->tupleDescriptor = tupleDescriptor;
+
+	TupleEncoder *encoder = CreateTupleEncoder(tupleDescriptor);
+	encoder->state = state;
+	encoder->start = CopyFormatEncoderStart;
+	encoder->push = CopyFormatEncoderPush;
+	encoder->finish = CopyFormatEncoderFinish;
+
 	return encoder;
 }
 
@@ -64,7 +72,7 @@ CopyFormatEncoderCreate(ByteSink *byteSink, TupleDesc tupleDescriptor,
 void
 CopyFormatEncoderStart(void *state)
 {
-	CopyFormatEncoder *encoder = (CopyFormatEncoder *) state;
+	CopyFormatEncoderState *encoder = (CopyFormatEncoderState *) state;
 	ByteSink *byteSink = encoder->byteSink;
 	CopyOutState copyOutState = (CopyOutState) palloc0(sizeof(CopyOutStateData));
 
@@ -107,7 +115,7 @@ CopyFormatEncoderStart(void *state)
 void
 CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 {
-	CopyFormatEncoder *encoder = (CopyFormatEncoder *) state;
+	CopyFormatEncoderState *encoder = (CopyFormatEncoderState *) state;
 	ByteSink *byteSink = encoder->byteSink;
 	TupleDesc tupleDescriptor = encoder->tupleDescriptor;
 	CopyOutState copyOutState = encoder->copyOutState;
@@ -126,7 +134,7 @@ CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 void
 CopyFormatEncoderFinish(void *state)
 {
-	CopyFormatEncoder *encoder = (CopyFormatEncoder *) state;
+	CopyFormatEncoderState *encoder = (CopyFormatEncoderState *) state;
 	ByteSink *byteSink = encoder->byteSink;
 	CopyOutState copyOutState = encoder->copyOutState;
 

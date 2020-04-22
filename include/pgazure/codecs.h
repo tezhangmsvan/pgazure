@@ -49,7 +49,6 @@ typedef struct TupleEncoder
  */
 typedef struct TupleDecoder
 {
-	TupleCodecType type;
 	TupleDesc tupleDescriptor;
 
 	void *state;
@@ -61,10 +60,13 @@ typedef struct TupleDecoder
 } TupleDecoder;
 
 
+TupleEncoder * CreateTupleEncoder(TupleDesc tupleDescriptor);
+TupleDecoder * CreateTupleDecoder(TupleDesc tupleDescriptor);
+
 TupleEncoder * BuildTupleEncoder(char *encoderString, TupleDesc tupleDescriptor,
 								 ByteSink *byteSink);
-TupleDecoder *BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor,
-								ByteSource *byteSource);
+TupleDecoder * BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor,
+								 ByteSource *byteSource);
 
 
 #endif

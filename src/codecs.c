@@ -13,16 +13,42 @@ static TupleCodecType TupleCodecTypeFromString(char *string);
 
 
 /*
+ * CreateTupleEncoder creates an empty tuple encoder.
+ *
+ * The state and functions still need to be set.
+ */
+TupleEncoder *
+CreateTupleEncoder(TupleDesc tupleDescriptor)
+{
+	TupleEncoder *encoder = palloc0(sizeof(TupleEncoder));
+	encoder->tupleDescriptor = tupleDescriptor;
+	return encoder;
+}
+
+
+/*
+ * CreateTupleDecoder creates an empty tuple decoder.
+ *
+ * The state and functions still need to be set.
+ */
+TupleDecoder *
+CreateTupleDecoder(TupleDesc tupleDescriptor)
+{
+	TupleDecoder *decoder = palloc0(sizeof(TupleDecoder));
+	decoder->tupleDescriptor = tupleDescriptor;
+	return decoder;
+}
+
+/*
  * BuildTupleEncoder builds a tuple encoder from a string.
  */
 TupleEncoder *
 BuildTupleEncoder(char *encoderString, TupleDesc tupleDescriptor, ByteSink *byteSink)
 {
-	TupleEncoder *encoder = palloc0(sizeof(TupleEncoder));
-	encoder->type = TupleCodecTypeFromString(encoderString);
-	encoder->tupleDescriptor = tupleDescriptor;
+	TupleEncoder *encoder = NULL;
+	TupleCodecType codecType = TupleCodecTypeFromString(encoderString);
 
-	switch (encoder->type)
+	switch (codecType)
 	{
 		case TUPLE_CODEC_BINARY:
 		case TUPLE_CODEC_CSV:
@@ -32,12 +58,7 @@ BuildTupleEncoder(char *encoderString, TupleDesc tupleDescriptor, ByteSink *byte
 				makeDefElem("format", (Node *) makeString(encoderString), -1);
 			List *copyOptions = list_make1(formatResultOption);
 
-			encoder->state = CopyFormatEncoderCreate(byteSink,
-													 tupleDescriptor,
-												     copyOptions);
-			encoder->start = CopyFormatEncoderStart;
-			encoder->push = CopyFormatEncoderPush;
-			encoder->finish = CopyFormatEncoderFinish;
+			encoder = CreateCopyFormatEncoder(byteSink, tupleDescriptor, copyOptions);
 		}
 
 		case TUPLE_CODEC_JSON:
@@ -56,11 +77,10 @@ BuildTupleEncoder(char *encoderString, TupleDesc tupleDescriptor, ByteSink *byte
 TupleDecoder *
 BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor, ByteSource *byteSource)
 {
-	TupleDecoder *decoder = palloc0(sizeof(TupleDecoder));
-	decoder->type = TupleCodecTypeFromString(decoderString);
-	decoder->tupleDescriptor = tupleDescriptor;
+	TupleDecoder *decoder = NULL;
+	TupleCodecType codecType = TupleCodecTypeFromString(decoderString);
 
-	switch (decoder->type)
+	switch (codecType)
 	{
 		case TUPLE_CODEC_BINARY:
 		case TUPLE_CODEC_CSV:
@@ -70,12 +90,7 @@ BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor, ByteSource *by
 				makeDefElem("format", (Node *) makeString(decoderString), -1);
 			List *copyOptions = list_make1(formatResultOption);
 
-			decoder->state = CopyFormatDecoderCreate(byteSource,
-													 tupleDescriptor,
-												     copyOptions);
-			decoder->start = CopyFormatDecoderStart;
-			decoder->next = CopyFormatDecoderNext;
-			decoder->finish = CopyFormatDecoderFinish;
+			decoder = CreateCopyFormatDecoder(byteSource, tupleDescriptor, copyOptions);
 		}
 
 		case TUPLE_CODEC_JSON:
@@ -83,7 +98,6 @@ BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor, ByteSource *by
 
 		}
 	}
-
 
 	return decoder;
 }

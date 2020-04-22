@@ -6,6 +6,7 @@
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "pgazure/byte_io.h"
+#include "pgazure/codecs.h"
 #include "pgazure/copy_format_decoder.h"
 #include "utils/builtins.h"
 #include "utils/rel.h"
@@ -28,15 +29,22 @@ static List * TupleDescColumnNameList(TupleDesc tupleDescriptor);
 static List * ColumnNameListToCopyStmtAttributeList(List *columnNameList);
 
 
-CopyFormatDecoder *
-CopyFormatDecoderCreate(ByteSource *byteSource, TupleDesc tupleDescriptor,
+TupleDecoder *
+CreateCopyFormatDecoder(ByteSource *byteSource, TupleDesc tupleDescriptor,
 						List *copyOptions)
 {
-	CopyFormatDecoder *decoder = palloc0(sizeof(CopyFormatDecoder));
-	decoder->byteSource = byteSource;
-	decoder->copyOptions = copyOptions;
-	decoder->executorState = CreateExecutorState();
-	decoder->tupleDescriptor = tupleDescriptor;
+	CopyFormatDecoderState *state = palloc0(sizeof(CopyFormatDecoderState));
+	state->byteSource = byteSource;
+	state->copyOptions = copyOptions;
+	state->executorState = CreateExecutorState();
+	state->tupleDescriptor = tupleDescriptor;
+
+	TupleDecoder *decoder = CreateTupleDecoder(tupleDescriptor);
+	decoder->state = state;
+	decoder->start = CopyFormatDecoderStart;
+	decoder->next = CopyFormatDecoderNext;
+	decoder->finish = CopyFormatDecoderFinish;
+
 	return decoder;
 }
 
@@ -44,7 +52,7 @@ CopyFormatDecoderCreate(ByteSource *byteSource, TupleDesc tupleDescriptor,
 void
 CopyFormatDecoderStart(void *state)
 {
-	CopyFormatDecoder *decoder = (CopyFormatDecoder *) state;
+	CopyFormatDecoderState *decoder = (CopyFormatDecoderState *) state;
 	CurrentByteSource = decoder->byteSource;
 
 	Relation stubRelation = StubRelation(decoder->tupleDescriptor);
@@ -62,7 +70,7 @@ CopyFormatDecoderStart(void *state)
 bool
 CopyFormatDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 {
-	CopyFormatDecoder *decoder = (CopyFormatDecoder *) state;
+	CopyFormatDecoderState *decoder = (CopyFormatDecoderState *) state;
 	EState *executorState = decoder->executorState;
 	MemoryContext executorTupleContext = GetPerTupleMemoryContext(executorState);
 	ExprContext *executorExpressionContext = GetPerTupleExprContext(executorState);
@@ -101,7 +109,7 @@ ReadFromCurrentByteSource(void *outBuf, int minRead, int maxRead)
 void
 CopyFormatDecoderFinish(void *state)
 {
-	CopyFormatDecoder *decoder = (CopyFormatDecoder *) state;
+	CopyFormatDecoderState *decoder = (CopyFormatDecoderState *) state;
 
 	EndCopyFrom(decoder->copyState);
 

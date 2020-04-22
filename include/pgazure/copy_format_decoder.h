@@ -16,21 +16,22 @@
 #include "commands/copy.h"
 #include "nodes/execnodes.h"
 #include "pgazure/byte_io.h"
+#include "pgazure/codecs.h"
 
 
-typedef struct CopyFormatDecoder
+typedef struct CopyFormatDecoderState
 {
 	CopyState copyState;
 	ByteSource *byteSource;
 	List *copyOptions;
 	TupleDesc tupleDescriptor;
 	EState *executorState;
-} CopyFormatDecoder;
+} CopyFormatDecoderState;
 
 
-CopyFormatDecoder * CopyFormatDecoderCreate(ByteSource *byteSource,
-											TupleDesc tupleDescriptor,
-											List *copyOptions);
+TupleDecoder * CreateCopyFormatDecoder(ByteSource *byteSource,
+                                       TupleDesc tupleDescriptor,
+                                       List *copyOptions);
 void CopyFormatDecoderStart(void *state);
 bool CopyFormatDecoderNext(void *state, Datum *columnValues, bool *columnNulls);
 void CopyFormatDecoderFinish(void *state);
