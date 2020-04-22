@@ -7,8 +7,10 @@
 #include "access/tupdesc.h"
 #include "nodes/makefuncs.h"
 #include "pgazure/blob_storage.h"
+#include "pgazure/blob_storage_utils.h"
 #include "pgazure/byte_io.h"
 #include "pgazure/codecs.h"
+#include "pgazure/zlib_compression.h"
 #include "storage/itemptr.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
@@ -46,10 +48,16 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		char *containerName = text_to_cstring(PG_GETARG_TEXT_P(2));
 		char *path = text_to_cstring(PG_GETARG_TEXT_P(3));
 		char *encoderString = "csv";
+		char *compressionString = "auto";
 
 		if (PG_NARGS() > 5)
 		{
 			encoderString = text_to_cstring(PG_GETARG_TEXT_P(5));
+		}
+
+		if (PG_NARGS() > 6)
+		{
+			compressionString = text_to_cstring(PG_GETARG_TEXT_P(6));
 		}
 
 		if (!AggCheckCallContext(fcinfo, &aggContext))
@@ -70,6 +78,22 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 
 		ByteSink *byteSink = palloc0(sizeof(ByteSink));
 		WriteBlockBlob(connectionString, containerName, path, byteSink);
+
+		if (strcmp(compressionString, "gzip") == 0)
+		{
+#ifdef HAVE_LIBZ
+			byteSink = CreateZLibCompressor(byteSink);
+#else
+			ereport(ERROR, (errmsg("gzip compression requires postgres to be "
+								   "built with zlib")));
+#endif
+		}
+		else if (strcmp(compressionString, "auto") == 0 && HasSuffix(path, ".gz"))
+		{
+#ifdef HAVE_LIBZ
+			byteSink = CreateZLibCompressor(byteSink);
+#endif
+		}
 
 		TupleEncoder *encoder = BuildTupleEncoder(encoderString,
 												  aggregateState->tupleDescriptor,

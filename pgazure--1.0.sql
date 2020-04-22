@@ -31,6 +31,12 @@ LANGUAGE C
 CALLED ON NULL INPUT
 AS 'MODULE_PATHNAME', $$blob_storage_put_blob_sfunc$$;
 
+CREATE FUNCTION blob_storage_put_blob_sfunc(state internal, connection_string text, container_name text, path text, tuple record, encoder text, compression text)
+RETURNS internal
+LANGUAGE C
+CALLED ON NULL INPUT
+AS 'MODULE_PATHNAME', $$blob_storage_put_blob_sfunc$$;
+
 CREATE FUNCTION blob_storage_put_blob_final(state internal)
 RETURNS VOID
 LANGUAGE C STRICT
@@ -43,6 +49,12 @@ CREATE AGGREGATE blob_storage_put_blob(connection_string text, container_name te
 );
 
 CREATE AGGREGATE blob_storage_put_blob(connection_string text, container_name text, path text, tuple record, encoder text) (
+    stype=internal,
+    sfunc=blob_storage_put_blob_sfunc,
+    finalfunc=blob_storage_put_blob_final
+);
+
+CREATE AGGREGATE blob_storage_put_blob(connection_string text, container_name text, path text, tuple record, encoder text, compression text) (
     stype=internal,
     sfunc=blob_storage_put_blob_sfunc,
     finalfunc=blob_storage_put_blob_final
