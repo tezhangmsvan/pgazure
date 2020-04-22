@@ -29,6 +29,10 @@ static List * TupleDescColumnNameList(TupleDesc tupleDescriptor);
 static List * ColumnNameListToCopyStmtAttributeList(List *columnNameList);
 
 
+/*
+ * CreateCopyFormatDecoder creates a tuple decoder that uses PostgreSQL's
+ * COPY logic to parse the incoming bytes.
+ */
 TupleDecoder *
 CreateCopyFormatDecoder(ByteSource *byteSource, TupleDesc tupleDescriptor,
 						List *copyOptions)

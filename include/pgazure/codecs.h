@@ -25,7 +25,7 @@ typedef enum TupleCodecType
 	TUPLE_CODEC_CSV,
 	TUPLE_CODEC_TEXT,
 	TUPLE_CODEC_BINARY,
-	TUPLE_CODEC_JSON,
+	TUPLE_CODEC_FULL_TEXT,
 } TupleCodecType;
 
 /*

@@ -5,6 +5,7 @@
 #include "pgazure/codecs.h"
 #include "pgazure/copy_format_decoder.h"
 #include "pgazure/copy_format_encoder.h"
+#include "pgazure/text_codec.h"
 #include "nodes/makefuncs.h"
 #include "nodes/parsenodes.h"
 
@@ -59,11 +60,13 @@ BuildTupleEncoder(char *encoderString, TupleDesc tupleDescriptor, ByteSink *byte
 			List *copyOptions = list_make1(formatResultOption);
 
 			encoder = CreateCopyFormatEncoder(byteSink, tupleDescriptor, copyOptions);
+			break;
 		}
 
-		case TUPLE_CODEC_JSON:
+		case TUPLE_CODEC_FULL_TEXT:
 		{
-
+			encoder = CreateTextEncoder(byteSink, tupleDescriptor);
+			break;
 		}
 	}
 
@@ -91,11 +94,13 @@ BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor, ByteSource *by
 			List *copyOptions = list_make1(formatResultOption);
 
 			decoder = CreateCopyFormatDecoder(byteSource, tupleDescriptor, copyOptions);
+			break;
 		}
 
-		case TUPLE_CODEC_JSON:
+		case TUPLE_CODEC_FULL_TEXT:
 		{
-
+			decoder = CreateTextDecoder(byteSource, tupleDescriptor);
+			break;
 		}
 	}
 
@@ -122,9 +127,10 @@ TupleCodecTypeFromString(char *codecString)
 	{
 		return TUPLE_CODEC_BINARY;
 	}
-	else if (strcmp(codecString, "json") != 0)
+	else if (strcmp(codecString, "json") != 0 ||
+	         strcmp(codecString, "fulltext") != 0)
 	{
-		return TUPLE_CODEC_JSON;
+		return TUPLE_CODEC_FULL_TEXT;
 	}
 	else
 	{
