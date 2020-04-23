@@ -28,7 +28,7 @@ PGAzure providers 3 UDFs for interacting with blob storage:
 
 - `azure.blob_storage_list_blobs(connection_string, container_name, prefix)` 
 - `azure.blob_storage_get_blob(connection_string, container_name, path)` 
-- `azure.blob_storage_put_blob(connection_string, container_name, path, record)` is an aggregate function for writing a set of records to blob storage (currently in CSV format) 
+- `azure.blob_storage_put_blob(connection_string, container_name, path, record)` is an aggregate function for writing a set of records to blob storage.
 
 The `blob_storage_list_blobs` lists objects in blob storage:
 ```sql
@@ -79,7 +79,7 @@ SELECT * FROM azure.blob_storage_get_blob('...','pgazure','customer_reviews_1998
 (3 rows)
 ```
 
-The `blob_storage_put_blob` aggregate writes a set of records to a file in blob storage (currently only uncompressed CSV).
+The `blob_storage_put_blob` aggregate writes a set of records to a file in blob storage..
 ```sql
-SELECT azure.blob_storage_put_blob('...','pgazure','customer_reviews_all.csv', customer_reviews) FROM customer_reviews;
+SELECT azure.blob_storage_put_blob('...','pgazure','customer_reviews_all.csv.gz', customer_reviews) FROM customer_reviews;
 ```
