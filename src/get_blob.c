@@ -14,9 +14,11 @@
 
 #include "nodes/makefuncs.h"
 #include "pgazure/blob_storage.h"
+#include "pgazure/blob_storage_utils.h"
 #include "pgazure/codecs.h"
 #include "pgazure/copy_format_decoder.h"
 #include "pgazure/set_returning_functions.h"
+#include "pgazure/zlib_compression.h"
 #include "utils/builtins.h"
 
 
@@ -36,25 +38,30 @@ blob_storage_get_blob(PG_FUNCTION_ARGS)
 {
 	if (PG_ARGISNULL(0))
 	{
-		ereport(ERROR, (errmsg("connection_string is required")));
+		ereport(ERROR, (errmsg("connection_string argument is required")));
 	}
 	if (PG_ARGISNULL(1))
 	{
-		ereport(ERROR, (errmsg("container_name is required")));
+		ereport(ERROR, (errmsg("container_name argument is required")));
 	}
 	if (PG_ARGISNULL(2))
 	{
-		ereport(ERROR, (errmsg("path is required")));
+		ereport(ERROR, (errmsg("path argument is required")));
 	}
 	if (PG_ARGISNULL(3))
 	{
-		ereport(ERROR, (errmsg("decoder is required")));
+		ereport(ERROR, (errmsg("decoder argument is required")));
+	}
+	if (PG_ARGISNULL(4))
+	{
+		ereport(ERROR, (errmsg("compression argument is required")));
 	}
 
 	char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(0));
 	char *containerName = text_to_cstring(PG_GETARG_TEXT_P(1));
 	char *path = text_to_cstring(PG_GETARG_TEXT_P(2));
 	char *decoderString = text_to_cstring(PG_GETARG_TEXT_P(3));
+	char *compressionString = text_to_cstring(PG_GETARG_TEXT_P(4));
 
 	if (strcmp(decoderString, "auto") == 0)
 	{
@@ -64,12 +71,28 @@ blob_storage_get_blob(PG_FUNCTION_ARGS)
 
 	TupleDesc tupleDescriptor = NULL;
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
-	ByteSource byteSource;
+	ByteSource *byteSource = palloc0(sizeof(ByteSource));
 
-	ReadBlockBlob(connectionString, containerName, path, &byteSource);
+	ReadBlockBlob(connectionString, containerName, path, byteSource);
+
+	if (strcmp(compressionString, "gzip") == 0)
+	{
+#ifdef HAVE_LIBZ
+		byteSource = CreateZLibDecompressor(byteSource);
+#else
+		ereport(ERROR, (errmsg("gzip compression requires postgres to be "
+							   "built with zlib")));
+#endif
+	}
+	else if (strcmp(compressionString, "auto") == 0 && HasSuffix(path, ".gz"))
+	{
+#ifdef HAVE_LIBZ
+		byteSource = CreateZLibDecompressor(byteSource);
+#endif
+	}
 
 	TupleDecoder *decoder = BuildTupleDecoder(decoderString, tupleDescriptor,
-											  &byteSource);
+											  byteSource);
 
 	DecodeTuplesIntoTupleStore(decoder, tupleStore);
 
@@ -85,25 +108,30 @@ blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)
 {
 	if (PG_ARGISNULL(0))
 	{
-		ereport(ERROR, (errmsg("connection_string is required")));
+		ereport(ERROR, (errmsg("connection_string argument is required")));
 	}
 	if (PG_ARGISNULL(1))
 	{
-		ereport(ERROR, (errmsg("container_name is required")));
+		ereport(ERROR, (errmsg("container_name argument is required")));
 	}
 	if (PG_ARGISNULL(2))
 	{
-		ereport(ERROR, (errmsg("path is required")));
+		ereport(ERROR, (errmsg("path argument is required")));
 	}
 	if (PG_ARGISNULL(4))
 	{
-		ereport(ERROR, (errmsg("decoder is required")));
+		ereport(ERROR, (errmsg("decoder argument is required")));
+	}
+	if (PG_ARGISNULL(5))
+	{
+		ereport(ERROR, (errmsg("compression argument is required")));
 	}
 
 	char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(0));
 	char *containerName = text_to_cstring(PG_GETARG_TEXT_P(1));
 	char *path = text_to_cstring(PG_GETARG_TEXT_P(2));
 	char *decoderString = text_to_cstring(PG_GETARG_TEXT_P(4));
+	char *compressionString = text_to_cstring(PG_GETARG_TEXT_P(5));
 
 	if (strcmp(decoderString, "auto") == 0)
 	{
@@ -114,12 +142,28 @@ blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)
 	Oid typeId = get_fn_expr_argtype(fcinfo->flinfo, 3);
 	TupleDesc tupleDescriptor = TypeGetTupleDesc(typeId, NIL);
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
-	ByteSource byteSource;
+	ByteSource *byteSource = palloc0(sizeof(ByteSource));
 
-	ReadBlockBlob(connectionString, containerName, path, &byteSource);
+	ReadBlockBlob(connectionString, containerName, path, byteSource);
+
+	if (strcmp(compressionString, "gzip") == 0)
+	{
+#ifdef HAVE_LIBZ
+		byteSource = CreateZLibDecompressor(byteSource);
+#else
+		ereport(ERROR, (errmsg("gzip compression requires postgres to be "
+							   "built with zlib")));
+#endif
+	}
+	else if (strcmp(compressionString, "auto") == 0 && HasSuffix(path, ".gz"))
+	{
+#ifdef HAVE_LIBZ
+		byteSource = CreateZLibDecompressor(byteSource);
+#endif
+	}
 
 	TupleDecoder *decoder = BuildTupleDecoder(decoderString, tupleDescriptor,
-											  &byteSource);
+											  byteSource);
 
 	DecodeTuplesIntoTupleStore(decoder, tupleStore);
 

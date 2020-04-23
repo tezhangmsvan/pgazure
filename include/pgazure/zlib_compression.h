@@ -18,6 +18,7 @@
 
 
 ByteSink * CreateZLibCompressor(ByteSink *byteSink);
+ByteSource * CreateZLibDecompressor(ByteSource *byteSource);
 
 
 #endif

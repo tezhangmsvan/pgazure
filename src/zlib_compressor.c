@@ -8,8 +8,8 @@
 
 #define Z_DEFAULT_COMPRESSION (-1)
 /* Initial buffer sizes used in zlib compression. */
-#define ZLIB_OUT_SIZE	4096
-#define ZLIB_IN_SIZE	4096
+#define ZLIB_OUT_SIZE	65536
+#define ZLIB_IN_SIZE	65536
 #define DEFAULT_COMPRESSION_LEVEL 6
 #define ZLIB_WINDOWSIZE 15
 #define GZIP_ENCODING   16
