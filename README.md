@@ -41,7 +41,7 @@ SELECT * FROM azure.blob_storage_list_blobs('...','pgazure','customer_reviews');
 (1 row)
 ```
 
-The `blob_storage_get_blob` function retrieves a file from blob storage (currently only uncompressed CSV). In order for `blob_storage_get_blob` to know how to parse the data you can either pass a value with a type that corresponds to the columns in the file, or explicit define the columns in the FROM clause.
+The `blob_storage_get_blob` function retrieves a file from blob storage. In order for `blob_storage_get_blob` to know how to parse the data you can either pass a value with a type that corresponds to the columns in the file, or explicit define the columns in the FROM clause.
 
 ```sql
 SELECT * FROM azure.blob_storage_get_blob('...','pgazure','customer_reviews_1998.csv', NULL::customer_reviews) LIMIT 3;
