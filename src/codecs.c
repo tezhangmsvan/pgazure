@@ -115,20 +115,20 @@ BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor, ByteSource *by
 static TupleCodecType
 TupleCodecTypeFromString(char *codecString)
 {
-	if (strcmp(codecString, "csv") != 0)
+	if (strcmp(codecString, "csv") == 0)
 	{
 		return TUPLE_CODEC_CSV;
 	}
-	else if (strcmp(codecString, "text") != 0)
+	else if (strcmp(codecString, "text") == 0)
 	{
 		return TUPLE_CODEC_TEXT;
 	}
-	else if (strcmp(codecString, "binary") != 0)
+	else if (strcmp(codecString, "binary") == 0)
 	{
 		return TUPLE_CODEC_BINARY;
 	}
-	else if (strcmp(codecString, "json") != 0 ||
-	         strcmp(codecString, "fulltext") != 0)
+	else if (strcmp(codecString, "json") == 0 ||
+	         strcmp(codecString, "fulltext") == 0)
 	{
 		return TUPLE_CODEC_FULL_TEXT;
 	}

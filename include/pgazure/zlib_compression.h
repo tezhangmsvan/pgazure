@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * zlib_compression.h
- *	  Utilities for compressing streams of bytes.
+ *	  Utilities for compressing streams of bytes using zlib.
  *
  * Copyright (c) Citus Data, Inc.
  *-------------------------------------------------------------------------

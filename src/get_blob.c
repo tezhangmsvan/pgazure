@@ -16,12 +16,18 @@
 #include "pgazure/blob_storage.h"
 #include "pgazure/blob_storage_utils.h"
 #include "pgazure/codecs.h"
+#include "pgazure/compression.h"
 #include "pgazure/copy_format_decoder.h"
 #include "pgazure/set_returning_functions.h"
 #include "pgazure/zlib_compression.h"
 #include "utils/builtins.h"
 
 
+static void ReadBlockBlobIntoTuplestore(char *connectionString, char *containerName,
+                                        char *path, char *decoderString,
+                                        char *compressionString,
+                                        Tuplestorestate *tupleStore,
+                                        TupleDesc tupleDescriptor);
 static void DecodeTuplesIntoTupleStore(TupleDecoder *decoder,
                                        Tuplestorestate *tupleStore);
 
@@ -63,38 +69,12 @@ blob_storage_get_blob(PG_FUNCTION_ARGS)
 	char *decoderString = text_to_cstring(PG_GETARG_TEXT_P(3));
 	char *compressionString = text_to_cstring(PG_GETARG_TEXT_P(4));
 
-	if (strcmp(decoderString, "auto") == 0)
-	{
-		/* TODO: look at the extension / content-encoding / content-type */
-		decoderString = "csv";
-	}
-
 	TupleDesc tupleDescriptor = NULL;
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
-	ByteSource *byteSource = palloc0(sizeof(ByteSource));
 
-	ReadBlockBlob(connectionString, containerName, path, byteSource);
+	ReadBlockBlobIntoTuplestore(connectionString, containerName, path, decoderString,
+	                            compressionString, tupleStore, tupleDescriptor);
 
-	if (strcmp(compressionString, "gzip") == 0)
-	{
-#ifdef HAVE_LIBZ
-		byteSource = CreateZLibDecompressor(byteSource);
-#else
-		ereport(ERROR, (errmsg("gzip compression requires postgres to be "
-							   "built with zlib")));
-#endif
-	}
-	else if (strcmp(compressionString, "auto") == 0 && HasSuffix(path, ".gz"))
-	{
-#ifdef HAVE_LIBZ
-		byteSource = CreateZLibDecompressor(byteSource);
-#endif
-	}
-
-	TupleDecoder *decoder = BuildTupleDecoder(decoderString, tupleDescriptor,
-											  byteSource);
-
-	DecodeTuplesIntoTupleStore(decoder, tupleStore);
 
 	PG_RETURN_DATUM(0);
 }
@@ -133,33 +113,49 @@ blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)
 	char *decoderString = text_to_cstring(PG_GETARG_TEXT_P(4));
 	char *compressionString = text_to_cstring(PG_GETARG_TEXT_P(5));
 
-	if (strcmp(decoderString, "auto") == 0)
-	{
-		/* TODO: look at the extension / content-encoding / content-type */
-		decoderString = "csv";
-	}
-
 	Oid typeId = get_fn_expr_argtype(fcinfo->flinfo, 3);
 	TupleDesc tupleDescriptor = TypeGetTupleDesc(typeId, NIL);
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
+
+	ReadBlockBlobIntoTuplestore(connectionString, containerName, path, decoderString,
+	                            compressionString, tupleStore, tupleDescriptor);
+
+	PG_RETURN_DATUM(0);
+}
+
+
+/*
+ * ReadBlockBlobIntoTuplestore reads a block blob from blob storage using the specified
+ * connection string, container and path into a tuple store. The data is decoded using
+ * the specified tuple decoder and compression strings.
+ */
+static void
+ReadBlockBlobIntoTuplestore(char *connectionString, char *containerName, char *path,
+                            char *decoderString, char *compressionString,
+                            Tuplestorestate *tupleStore, TupleDesc tupleDescriptor)
+{
 	ByteSource *byteSource = palloc0(sizeof(ByteSource));
 
 	ReadBlockBlob(connectionString, containerName, path, byteSource);
 
-	if (strcmp(compressionString, "gzip") == 0)
+	if (strcmp(compressionString, "auto") == 0)
 	{
-#ifdef HAVE_LIBZ
-		byteSource = CreateZLibDecompressor(byteSource);
-#else
-		ereport(ERROR, (errmsg("gzip compression requires postgres to be "
-							   "built with zlib")));
-#endif
+		if (HasSuffix(path, ".gz"))
+		{
+			compressionString = "gzip";
+		}
+		else
+		{
+			compressionString = "none";
+		}
 	}
-	else if (strcmp(compressionString, "auto") == 0 && HasSuffix(path, ".gz"))
+
+	byteSource = BuildDecompressor(compressionString, byteSource);
+
+	if (strcmp(decoderString, "auto") == 0)
 	{
-#ifdef HAVE_LIBZ
-		byteSource = CreateZLibDecompressor(byteSource);
-#endif
+		/* TODO: look at the extension / content-encoding / content-type */
+		decoderString = "csv";
 	}
 
 	TupleDecoder *decoder = BuildTupleDecoder(decoderString, tupleDescriptor,
@@ -167,7 +163,7 @@ blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)
 
 	DecodeTuplesIntoTupleStore(decoder, tupleStore);
 
-	PG_RETURN_DATUM(0);
+	pfree(byteSource);
 }
 
 
