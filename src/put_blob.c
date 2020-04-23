@@ -48,7 +48,7 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(1));
 		char *containerName = text_to_cstring(PG_GETARG_TEXT_P(2));
 		char *path = text_to_cstring(PG_GETARG_TEXT_P(3));
-		char *encoderString = "csv";
+		char *encoderString = "auto";
 		char *compressionString = "auto";
 
 		if (PG_NARGS() > 5)
@@ -93,6 +93,26 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		}
 
 		byteSink = BuildCompressor(compressionString, byteSink);
+
+		if (strcmp(encoderString, "auto") == 0)
+		{
+			if (HasSuffix(path, ".csv") || HasSuffix(path, ".csv.gz"))
+			{
+				encoderString = "csv";
+			}
+			else if (HasSuffix(path, ".tsv") || HasSuffix(path, ".tsv.gz"))
+			{
+				encoderString = "text";
+			}
+			else if (HasSuffix(path, ".json") || HasSuffix(path, ".json.gz"))
+			{
+				encoderString = "json";
+			}
+			else
+			{
+				encoderString = "csv";
+			}
+		}
 
 		TupleEncoder *encoder = BuildTupleEncoder(encoderString,
 												  aggregateState->tupleDescriptor,
