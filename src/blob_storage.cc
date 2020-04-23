@@ -8,7 +8,17 @@
 #include "pgazure/blob_storage.h"
 
 
-void
+static void CheckForInterrupts(void);
+static int ReadFromStdInputStream(void *context, void *buf, int minRead, int maxRead);
+static void CloseStdInputStream(void *context);
+static void WriteToBlockBlobWriter(void *context, void *buf, int bytesToWrite);
+static void CloseBlockBlobWriter(void *context);
+
+
+/*
+ * CheckForInterrupts throws a runtime error if the user cancelled the query.
+ */
+static void
 CheckForInterrupts(void)
 {
 	if (IsQueryCancelPending())
@@ -18,43 +28,71 @@ CheckForInterrupts(void)
 }
 
 
-extern "C" int ReadFromStdInputStream(void *context, void *buf, int minRead, int maxRead);
-extern "C" void CloseStdInputStream(void *context);
-
-int
+/*
+ * ReadFromStdInputStream reads up to maxRead bytes from an istream pointed
+ * to by context into outBuf.
+ */
+static int
 ReadFromStdInputStream(void *context, void *outBuf, int minRead, int maxRead)
 {
-	std::istream *syncStream = (std::istream *) context;
-	char *buf = (char *) outBuf;
-	int bytesRead = 0;
-
-	do
+	try
 	{
-		if (!syncStream->read(buf + bytesRead, maxRead - bytesRead))
+		std::istream *syncStream = (std::istream *) context;
+		char *buf = (char *) outBuf;
+		int bytesRead = 0;
+
+		/* loop until we have minRead bytes or reach the end of the stream */
+		do
 		{
-			/* reached the end of stream, but may still have gotten some bytes */
+			if (!syncStream->read(buf + bytesRead, maxRead - bytesRead))
+			{
+				/* reached the end of stream, but may still have gotten some bytes */
+				bytesRead += syncStream->gcount();
+				break;
+			}
+
 			bytesRead += syncStream->gcount();
-			break;
+
+			CheckForInterrupts();
 		}
+		while (bytesRead < minRead);
 
-		bytesRead += syncStream->gcount();
+		return bytesRead;
 	}
-	while (bytesRead < minRead);
+	catch (const std::exception& e)
+	{
+		ThrowPostgresError(e.what());
+	}
 
-	return bytesRead;
+	/* unreachable */
+	return 0;
 }
 
-void
+
+/*
+ * CloseStdInputStream disposes of the istream pointed to by context.
+ */
+static void
 CloseStdInputStream(void *context)
 {
-	std::istream *syncStream = (std::istream *) context;
-	delete syncStream;
+	try
+	{
+		std::istream *syncStream = (std::istream *) context;
+		delete syncStream;
+	}
+	catch (const std::exception& e)
+	{
+		ThrowPostgresError(e.what());
+	}
 }
 
 
-
+/*
+ * ReadBlockBlob opens a block blob for reading from the byte source.
+ */
 void
-ReadBlockBlob(char *connectionString, char *containerName, char *path, ByteSource *byteSource)
+ReadBlockBlob(char *connectionString, char *containerName, char *path,
+              ByteSource *byteSource)
 {
 	try
 	{
@@ -72,8 +110,6 @@ ReadBlockBlob(char *connectionString, char *containerName, char *path, ByteSourc
 	}
 	catch (const azure::storage::storage_exception& e)
 	{
-		ucout << U("Error: ") << e.what() << std::endl;
-
 		azure::storage::request_result result = e.result();
 		azure::storage::storage_extended_error extended_error = result.extended_error();
 		if (!extended_error.message().empty())
@@ -98,7 +134,6 @@ class BlockBlobWriter {
 		azure::storage::cloud_block_blob block_blob;
 		concurrency::streams::ostream blockStream;
 		concurrency::streams::streambuf<char> streamBuf;
-		//Concurrency::streams::async_ostream<char> *syncStream;
 
 	public:
 		BlockBlobWriter(char *connectionString, char *containerName, char *path);
@@ -115,25 +150,13 @@ BlockBlobWriter::BlockBlobWriter(char *connectionString, char *containerName, ch
 	block_blob = container.get_block_blob_reference(U(path));
 	blockStream = block_blob.open_write();
 	streamBuf = blockStream.streambuf();
-	//syncStream = new Concurrency::streams::async_ostream<char>(blockStream);
 }
 
 void BlockBlobWriter::write(const char *buf, int bytesToWrite)
 {
-	try
-	{
-		std::vector<uint8_t> buffer(buf, buf + bytesToWrite);
-		concurrency::streams::container_buffer<std::vector<uint8_t>> sbuf(buffer);
-		blockStream.write(sbuf, bytesToWrite).wait();
-/*
-		blockStream.streambuf().putn_nocopy(buf, bytesToWrite).wait();
-*/
-		//syncStream->write(buf, bytesToWrite);
-	}
-	catch (const std::exception& e)
-	{
-		ThrowPostgresError(e.what());
-	}
+	std::vector<uint8_t> buffer(buf, buf + bytesToWrite);
+	concurrency::streams::container_buffer<std::vector<uint8_t>> sbuf(buffer);
+	blockStream.write(sbuf, bytesToWrite).wait();
 }
 
 void BlockBlobWriter::close()
@@ -143,25 +166,47 @@ void BlockBlobWriter::close()
 }
 
 
-int
+/*
+ * WriteToBlockBlobWriter is a C-style wrapper for the BlockBlobWriter::write function.
+ */
+static void
 WriteToBlockBlobWriter(void *context, void *buf, int bytesToWrite)
 {
-	BlockBlobWriter *writer = (BlockBlobWriter *) context;
+	try
+	{
+		BlockBlobWriter *writer = (BlockBlobWriter *) context;
 
-	writer->write((const char *) buf, bytesToWrite);
-	return 0;
+		writer->write((const char *) buf, bytesToWrite);
+	}
+	catch (const std::exception& e)
+	{
+		ThrowPostgresError(e.what());
+	}
 }
 
-void
+
+/*
+ * CloseBlockBlobWriter is a C-style wrapper for the BlockBlobWriter::close function.
+ */
+static void
 CloseBlockBlobWriter(void *context)
 {
-	BlockBlobWriter *writer = (BlockBlobWriter *) context;
-	writer->close();
-	delete writer;
+	try
+	{
+		BlockBlobWriter *writer = (BlockBlobWriter *) context;
+		writer->close();
+		delete writer;
+	}
+	catch (const std::exception& e)
+	{
+		ThrowPostgresError(e.what());
+	}
 }
 
 
-
+/*
+ * WriteBlockBlob opens a block blob for writing into the byte sink.
+ */
 void
 WriteBlockBlob(char *connectionString, char *containerName, char *path, ByteSink *byteSink)
 {
@@ -175,8 +220,6 @@ WriteBlockBlob(char *connectionString, char *containerName, char *path, ByteSink
 	}
 	catch (const azure::storage::storage_exception& e)
 	{
-		ucout << U("Error: ") << e.what() << std::endl;
-
 		azure::storage::request_result result = e.result();
 		azure::storage::storage_extended_error extended_error = result.extended_error();
 		if (!extended_error.message().empty())
@@ -193,8 +236,6 @@ WriteBlockBlob(char *connectionString, char *containerName, char *path, ByteSink
 		ThrowPostgresError(e.what());
 	}
 }
-
-
 
 
 std::vector<azure::storage::cloud_blob>

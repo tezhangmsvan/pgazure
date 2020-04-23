@@ -82,6 +82,7 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 
 		if (strcmp(compressionString, "auto") == 0)
 		{
+			/* TODO: look at the content-type / content-encoding */
 			if (HasSuffix(path, ".gz"))
 			{
 				compressionString = "gzip";
@@ -96,6 +97,7 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 
 		if (strcmp(encoderString, "auto") == 0)
 		{
+			/* TODO: look at the content-type / content-encoding */
 			if (HasSuffix(path, ".csv") || HasSuffix(path, ".csv.gz"))
 			{
 				encoderString = "csv";

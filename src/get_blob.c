@@ -140,6 +140,7 @@ ReadBlockBlobIntoTuplestore(char *connectionString, char *containerName, char *p
 
 	if (strcmp(compressionString, "auto") == 0)
 	{
+		/* TODO: look at the content-type / content-encoding */
 		if (HasSuffix(path, ".gz"))
 		{
 			compressionString = "gzip";
@@ -154,7 +155,7 @@ ReadBlockBlobIntoTuplestore(char *connectionString, char *containerName, char *p
 
 	if (strcmp(decoderString, "auto") == 0)
 	{
-		/* TODO: look at the extension / content-encoding / content-type */
+		/* TODO: look at the content-type */
 		decoderString = "csv";
 	}
 

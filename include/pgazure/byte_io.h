@@ -26,7 +26,7 @@ typedef struct ByteSink
 {
 	void *context;
 	void *context2;
-	int (*write) (void *context, void *outbuf, int numBytes);
+	void (*write) (void *context, void *outbuf, int numBytes);
 	void (*close) (void *context2);
 } ByteSink;
 

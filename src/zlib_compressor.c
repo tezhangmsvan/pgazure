@@ -26,7 +26,7 @@ typedef struct ZLibCompressorState
 } ZLibCompressorState;
 
 
-static int ZLibWrite(void *context, void *buffer, int bytesToWrite);
+static void ZLibWrite(void *context, void *buffer, int bytesToWrite);
 static void ZLibClose(void *context);
 static void DeflateBufferedData(ZLibCompressorState *state, bool flush);
 
@@ -79,7 +79,7 @@ CreateZLibCompressor(ByteSink *byteSink)
 /*
  * ZLibWrite appends the given buffer to the zlib buffer for compression.
  */
-static int
+static void
 ZLibWrite(void *context, void *buffer, int bytesToWrite)
 {
 	ZLibCompressorState *state = (ZLibCompressorState *) context;
@@ -88,8 +88,6 @@ ZLibWrite(void *context, void *buffer, int bytesToWrite)
 	state->zp->avail_in = bytesToWrite;
 
 	DeflateBufferedData(state, false);
-
-	return 0;
 }
 
 
