@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * cpp_utils.c
+ *		Utility functions for interactions with C / PG code from C++
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 #include "miscadmin.h"
 

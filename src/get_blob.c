@@ -1,13 +1,12 @@
 /*-------------------------------------------------------------------------
  *
- * src/get_blob.c
+ * get_blob.c
+ *     Implementation the blob_storage_get_blob UDFs
  *
  * Copyright (c), Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */
-#include <zlib.h>
-
 #include "postgres.h"
 #include "fmgr.h"
 #include "miscadmin.h"
@@ -37,7 +36,10 @@ PG_FUNCTION_INFO_V1(blob_storage_get_blob_anyelement);
 
 
 /*
- * blob_storage_get_blob
+ * blob_storage_get_blob gets a blob from blob storage and tries to decode
+ * it into a tuple store.
+ *
+ * The tuple is described by a list of output columns in the SQL query.
  */
 Datum
 blob_storage_get_blob(PG_FUNCTION_ARGS)
@@ -81,7 +83,10 @@ blob_storage_get_blob(PG_FUNCTION_ARGS)
 
 
 /*
- * blob_storage_get_blob
+ * blob_storage_get_blob gets a blob from blob storage and tries to decode
+ * it into a tuple store.
+ *
+ * The tuple is described by a dummy argument with the same type as the tuple.
  */
 Datum
 blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)

@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * zlib_decompressor.c
+ *     Compressor that uses libz to decompress a stream of bytes as gzip.
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 #include "miscadmin.h"
 
@@ -15,6 +24,10 @@
 #define ZLIB_CFACTOR    9
 
 
+/*
+ * ZLibDecompressorState contains the internal state that is passed to the
+ * read and close functions of the ByteSource.
+ */
 typedef struct ZLibDecompressorState
 {
     z_streamp zp;

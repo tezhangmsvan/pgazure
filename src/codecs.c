@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * codecs.c
+ *		Implements utility functions for creating tuple encoders/decoders.
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "access/tupdesc.h"

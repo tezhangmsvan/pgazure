@@ -1,3 +1,16 @@
+/*-------------------------------------------------------------------------
+ *
+ * copy_format_encoder.c
+ *		Implements functions that encode tuples in COPY format
+ *
+ * Parts of the code are taken from copy.c in PostgreSQL.
+ *
+ * Portions Copyright (c) 1996-2020, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ * Portions Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 #include "fmgr.h"
 #include "miscadmin.h"
@@ -46,6 +59,13 @@ static void CopyFlushOutput(CopyOutState cstate, char *start, char *pointer);
 static void ProcessCopyOutOptions(CopyOutState cstate, List *options);
 
 
+/*
+ * CreateCopyFormatEncoder creates a tuple encoder that writes to the
+ * byte sink in the format produced by COPY .. TO ..
+ *
+ * The list of copyOptions corresponds to the WITH section of the COPY
+ * statement.
+ */
 TupleEncoder *
 CreateCopyFormatEncoder(ByteSink *byteSink, TupleDesc tupleDescriptor,
                         List *copyOptions)
@@ -108,6 +128,10 @@ CopyFormatEncoderStart(void *state)
 }
 
 
+/*
+ * CopyFormatEncoderPush encodes a single tuple according to the COPY format
+ * and writes it to the byte sink immediately.
+ */
 void
 CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 {
@@ -127,6 +151,9 @@ CopyFormatEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 }
 
 
+/*
+ * CopyFormatEncoderFinish writes footers (if any) and closes the byteSink.
+ */
 void
 CopyFormatEncoderFinish(void *state)
 {

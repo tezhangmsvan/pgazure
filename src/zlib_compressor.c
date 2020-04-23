@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * zlib_compressor.c
+ *     Compressor that uses libz to compress a stream of bytes as gzip.
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "pgazure/byte_io.h"
@@ -16,6 +25,10 @@
 #define ZLIB_CFACTOR    9
 
 
+/*
+ * ZLibCompressorState contains the internal state that is passed to
+ * the write and close functions of the ByteSink.
+ */
 typedef struct ZLibCompressorState
 {
     ByteSink *byteSink;

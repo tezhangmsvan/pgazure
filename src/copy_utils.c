@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * copy_utils.c
+ *		Utility functions for encoding/decoding in COPY format
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "access/tupdesc.h"

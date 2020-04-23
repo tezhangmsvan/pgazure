@@ -1,3 +1,13 @@
+/*-------------------------------------------------------------------------
+ *
+ * text_encoder.c
+ *     Tuple encoder that only accepts a single column and writes it as
+ *     text to the byte sink.
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 #include "fmgr.h"
 #include "miscadmin.h"
@@ -24,6 +34,12 @@ static void TextEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 static void TextEncoderFinish(void *state);
 
 
+/*
+ * CreateTextEncoder creates a text encoder that only accepts tuples with
+ * a single column. The tuples are converted to text and written to the
+ * ByteSink as is (without escaping). This is useful for outputting formatted
+ * JSON or text to a file.
+ */
 TupleEncoder *
 CreateTextEncoder(ByteSink *byteSink, TupleDesc tupleDescriptor)
 {
@@ -46,6 +62,9 @@ CreateTextEncoder(ByteSink *byteSink, TupleDesc tupleDescriptor)
 }
 
 
+/*
+ * TextEncoderStart is a noop to satisfy the tuple decoder API.
+ */
 static void
 TextEncoderStart(void *state)
 {
@@ -53,6 +72,11 @@ TextEncoderStart(void *state)
 }
 
 
+/*
+ * TextEncoderPush calls the output function of the first column of
+ * the tuple and writes the resulting text to the byteSink. It can
+ * be called multiple times to concatenate the text.
+ */
 static void
 TextEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 {
@@ -67,6 +91,9 @@ TextEncoderPush(void *state, Datum *columnValues, bool *columnNulls)
 }
 
 
+/*
+ * TextEncoderFinish closes the byte sink of the encoder.
+ */
 static void
 TextEncoderFinish(void *state)
 {

@@ -1,3 +1,13 @@
+/*-------------------------------------------------------------------------
+ *
+ * text_decoder.c
+ *     Tuple decoder that turns the entire input into a single value.
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
+
 #include "postgres.h"
 #include "fmgr.h"
 #include "miscadmin.h"
@@ -10,11 +20,23 @@
 #include "utils/lsyscache.h"
 
 
+/*
+ * TextDecoderState contains the internal state that is passed to the
+ * decoder functions.
+ */
 typedef struct TextDecoderState
 {
+	/* the decoder reads from this byte source */
 	ByteSource *byteSource;
+
+	/*
+	 * valueReturned is true when a value has been returned, such that the next
+	 * function returns false the second time.
+	 */
 	bool valueReturned;
-	Oid functionId;
+
+	/* OID of the input function used to parse the source data */
+	Oid inputFunctionId;
 	Oid typeIOParam;
 } TextDecoderState;
 
@@ -24,6 +46,12 @@ static bool TextDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 static void TextDecoderFinish(void *state);
 
 
+/*
+ * CreateTextDecoder creates a tuple decoder that reads all bytes from the
+ * byte source and parses it via the input function of the only column in
+ * the TupleDesc to produce a single value. This is useful for decoding files
+ * which contain a single JSON object.
+ */
 TupleDecoder *
 CreateTextDecoder(ByteSource *byteSource, TupleDesc tupleDescriptor)
 {
@@ -39,7 +67,7 @@ CreateTextDecoder(ByteSource *byteSource, TupleDesc tupleDescriptor)
 	Form_pg_attribute attr = TupleDescAttr(tupleDescriptor, 0);
 	Oid valueTypeId = attr->atttypid;
 
-	getTypeInputInfo(valueTypeId, &state->functionId, &state->typeIOParam);
+	getTypeInputInfo(valueTypeId, &state->inputFunctionId, &state->typeIOParam);
 
 	TupleDecoder *decoder = CreateTupleDecoder(tupleDescriptor);
 	decoder->state = state;
@@ -51,6 +79,9 @@ CreateTextDecoder(ByteSource *byteSource, TupleDesc tupleDescriptor)
 }
 
 
+/*
+ * TextDecoderStart is a noop to satisfy the tuple decoder API.
+ */
 void
 TextDecoderStart(void *state)
 {
@@ -59,7 +90,8 @@ TextDecoderStart(void *state)
 
 
 /*
- * TextDecoderNext
+ * TextDecoderNext reads all bytes from the byte source and parses them
+ * by calling the input function of the tuple.
  */
 bool
 TextDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
@@ -68,7 +100,6 @@ TextDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 
 	if (decoder->valueReturned)
 	{
-		/* this decoder can only return one value */
 		return false;
 	}
 
@@ -97,16 +128,20 @@ TextDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 	else
 	{
 		columnNulls[0] = false;
-		columnValues[0] = OidInputFunctionCall(decoder->functionId, text->data,
+		columnValues[0] = OidInputFunctionCall(decoder->inputFunctionId, text->data,
 		                                       decoder->typeIOParam, -1);
 	}
 
+	/* there will not be a second row */
 	decoder->valueReturned = true;
 
 	return true;
 }
 
 
+/*
+ * TextDecoderFinish closes the byte source of the decoder.
+ */
 void
 TextDecoderFinish(void *state)
 {

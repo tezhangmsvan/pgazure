@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * put_blob.c
+ *     Implementation the blob_storage_put_blob UDFs
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "fmgr.h"
@@ -22,6 +31,10 @@ PG_FUNCTION_INFO_V1(blob_storage_put_blob_sfunc);
 PG_FUNCTION_INFO_V1(blob_storage_put_blob_final);
 
 
+/*
+ * BlobStoragePutBlobAggState is the internal state of the blob_storage_put_blob
+ * aggregate.
+ */
 typedef struct
 {
 	TupleDesc tupleDescriptor;
@@ -30,14 +43,19 @@ typedef struct
 	Datum *values;
 	bool *nulls;
 	TupleEncoder *encoder;
-} BlobStoragePutBlobState;
+} BlobStoragePutBlobAggState;
 
 
+/*
+ * blob_storage_put_blob_sfunc is the sfunc (called per tuple) of the
+ * blob_storage_put_blob aggregate. On the first call it initializes the
+ * internal state, and then writes incoming tuples to the encoder.
+ */
 Datum
 blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 {
-	BlobStoragePutBlobState *aggregateState =
-		(BlobStoragePutBlobState *) PG_GETARG_POINTER(0);
+	BlobStoragePutBlobAggState *aggregateState =
+		(BlobStoragePutBlobAggState *) PG_GETARG_POINTER(0);
 	HeapTupleHeader rec = PG_GETARG_HEAPTUPLEHEADER(4);
 
 	if (aggregateState == NULL)
@@ -67,7 +85,7 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		}
 
 		oldContext = MemoryContextSwitchTo(aggContext);
-		aggregateState = palloc0(sizeof(BlobStoragePutBlobState));
+		aggregateState = palloc0(sizeof(BlobStoragePutBlobAggState));
 
 		Oid tupType = HeapTupleHeaderGetTypeId(rec);
 		int32 tupTypmod = HeapTupleHeaderGetTypMod(rec);
@@ -127,28 +145,36 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		MemoryContextSwitchTo(oldContext);
 	}
 
+	/* construct the tuple data structure */
 	HeapTupleData tuple;
 	tuple.t_len = HeapTupleHeaderGetDatumLength(rec);
 	ItemPointerSetInvalid(&(tuple.t_self));
 	tuple.t_tableOid = InvalidOid;
 	tuple.t_data = rec;
 
+	/* extract the tuple into the values and nulls arrays */
 	TupleDesc tupleDesc = aggregateState->tupleDescriptor;
 	Datum *values = aggregateState->values;
 	bool *nulls = aggregateState->nulls;
 	heap_deform_tuple(&tuple, tupleDesc, values, nulls);
 
+	/* encode the tuple and write it to the byte sink */
 	aggregateState->encoder->push(aggregateState->encoder->state, values, nulls);
 
 	PG_RETURN_POINTER(aggregateState);
 }
 
 
+/*
+ * blob_storage_put_blob_final is the ffunc (called once at the end) of the
+ * blob_storage_put_blob aggregate. It closes the decoder to finish writing
+ * tuples to the sink.
+ */
 Datum
 blob_storage_put_blob_final(PG_FUNCTION_ARGS)
 {
-	BlobStoragePutBlobState *aggregateState =
-		(BlobStoragePutBlobState *) PG_GETARG_POINTER(0);
+	BlobStoragePutBlobAggState *aggregateState =
+		(BlobStoragePutBlobAggState *) PG_GETARG_POINTER(0);
 	TupleEncoder *encoder = aggregateState->encoder;
 
 	encoder->finish(encoder->state);

@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * compression.c
+ *		Implements utility functions for creating byte (de)compressors.
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "pgazure/byte_io.h"

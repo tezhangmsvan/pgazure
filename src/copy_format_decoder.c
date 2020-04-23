@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * copy_format_decoder.c
+ *		Implements functions that decode bytes to tuples in COPY format
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 #include "fmgr.h"
 #include "miscadmin.h"
@@ -20,6 +29,11 @@
 #endif
 
 
+/*
+ * BeginCopyFrom takes a callback function to read bytes from, but it does not
+ * allow you to specify an extra argument. Therefore we set this global variable
+ * and use it the callback (ReadFromCurrentByteSource).
+ */
 static ByteSource *CurrentByteSource;
 
 
@@ -53,10 +67,15 @@ CreateCopyFormatDecoder(ByteSource *byteSource, TupleDesc tupleDescriptor,
 }
 
 
+/*
+ * CopyFormatDecoderStart start decoding bytes from the byte source.
+ */
 void
 CopyFormatDecoderStart(void *state)
 {
 	CopyFormatDecoderState *decoder = (CopyFormatDecoderState *) state;
+
+	/* set the global byte source to read in ReadFromCurrentByteSource */
 	CurrentByteSource = decoder->byteSource;
 
 	Relation stubRelation = StubRelation(decoder->tupleDescriptor);
@@ -71,6 +90,11 @@ CopyFormatDecoderStart(void *state)
 }
 
 
+/*
+ * CopyFormatDecoderNext reads a tuple in COPY format from the ByteSource and writes
+ * the values to columnValues and columnNulls. If returns false when there are no
+ * more tuples to read.
+ */
 bool
 CopyFormatDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 {
@@ -100,6 +124,10 @@ CopyFormatDecoderNext(void *state, Datum *columnValues, bool *columnNulls)
 }
 
 
+/*
+ * ReadFromCurrentByteSource is a callback function passed to BeginCopyFrom to
+ * read from CurrentByteSource.
+ */
 static int
 ReadFromCurrentByteSource(void *outBuf, int minRead, int maxRead)
 {
@@ -110,6 +138,9 @@ ReadFromCurrentByteSource(void *outBuf, int minRead, int maxRead)
 }
 
 
+/*
+ * CopyFormatDecoderFinish cleans up state data structures and closes the copy source.
+ */
 void
 CopyFormatDecoderFinish(void *state)
 {

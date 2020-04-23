@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * list_blobs.c
+ *     Implementation the blob_storage_list_blobs UDF
+ *
+ * Copyright (c), Citus Data, Inc.
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "fmgr.h"
@@ -24,6 +33,7 @@
 #define LIST_RESULT_CONTENT_MD5_INDEX 7
 
 
+/* avoid repetition when setting fields of a tuple */
 #define SetColumnValue(index,value) \
 { \
 	columnValues[index] = value; \
@@ -43,7 +53,10 @@
 PG_FUNCTION_INFO_V1(blob_storage_list_blobs);
 
 
-struct ListBlobsReceiver
+/*
+ * ListBlobsReceiver contains state that is passed to AddBlobToTupleStore via C++ code.
+ */
+typedef struct ListBlobsReceiver
 {
 	Tuplestorestate *tupleStore;
 	TupleDesc tupleDescriptor;
@@ -51,7 +64,7 @@ struct ListBlobsReceiver
 	int columnCount;
     Datum *columnValues;
     bool *columnNulls;
-};
+} ListBlobsReceiver;
 
 
 static void AddBlobToTupleStore(void *context, CloudBlob *blob);
@@ -82,6 +95,10 @@ blob_storage_list_blobs(PG_FUNCTION_ARGS)
 }
 
 
+/*
+ * AddBlobToTupleStore writes the CloudBlob as a tuple to the tuplestore in the
+ * ListBlobsReceiver (passed as context).
+ */
 static void
 AddBlobToTupleStore(void *context, CloudBlob *cloudBlob)
 {
