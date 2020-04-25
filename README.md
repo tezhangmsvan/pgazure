@@ -83,3 +83,22 @@ The `blob_storage_put_blob` aggregate writes a set of records to a file in blob 
 ```sql
 SELECT azure.blob_storage_put_blob('...','pgazure','customer_reviews_all.csv.gz', customer_reviews) FROM customer_reviews;
 ```
+
+## Storing credentials
+
+You can store the connection string as follows:
+
+```sql
+SELECT azure.add_storage_account('mystorageaccount', 'DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net');
+```
+
+After that, you can use the name instead of the connection string in all operations, e.g.:
+```sql
+SELECT * FROM azure.blob_storage_list_blobs('mystorageaccount','pgazure','customer_reviews');  
+┌──────────────────────────────┬───────────┬────────────────────────┬─────────────────────┬──────────────────────────┬──────────────────┬──────────────────┬───────────────────────
+│             path             │   size    │     last_modified      │        etag         │       content_type       │ content_encoding │ content_language │       content_md5    
+├──────────────────────────────┼───────────┼────────────────────────┼─────────────────────┼──────────────────────────┼──────────────────┼──────────────────┼───────────────────────
+│ customer_reviews_1998.csv    │ 101299118 │ 2020-04-19 21:16:35+02 │ "0x8D7E4962D9F0CC7" │ text/csv                 │                  │                  │                      
+└──────────────────────────────┴───────────┴────────────────────────┴─────────────────────┴──────────────────────────┴──────────────────┴──────────────────┴───────────────────────
+(1 row)
+```
