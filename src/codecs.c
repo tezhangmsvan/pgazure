@@ -20,6 +20,7 @@
 
 
 static TupleCodecType TupleCodecTypeFromString(char *string);
+static char * CopyFormatFromCodecType(TupleCodecType codecType);
 
 
 /*
@@ -62,10 +63,11 @@ BuildTupleEncoder(char *encoderString, TupleDesc tupleDescriptor, ByteSink *byte
 	{
 		case TUPLE_CODEC_BINARY:
 		case TUPLE_CODEC_CSV:
-		case TUPLE_CODEC_TEXT:
+		case TUPLE_CODEC_TSV:
 		{
+			char *copyFormat = CopyFormatFromCodecType(codecType);
 			DefElem *formatResultOption =
-				makeDefElem("format", (Node *) makeString(encoderString), -1);
+				makeDefElem("format", (Node *) makeString(copyFormat), -1);
 			List *copyOptions = list_make1(formatResultOption);
 
 			encoder = CreateCopyFormatEncoder(byteSink, tupleDescriptor, copyOptions);
@@ -96,10 +98,11 @@ BuildTupleDecoder(char *decoderString, TupleDesc tupleDescriptor, ByteSource *by
 	{
 		case TUPLE_CODEC_BINARY:
 		case TUPLE_CODEC_CSV:
-		case TUPLE_CODEC_TEXT:
+		case TUPLE_CODEC_TSV:
 		{
+			char *copyFormat = CopyFormatFromCodecType(codecType);
 			DefElem *formatResultOption =
-				makeDefElem("format", (Node *) makeString(decoderString), -1);
+				makeDefElem("format", (Node *) makeString(copyFormat), -1);
 			List *copyOptions = list_make1(formatResultOption);
 
 			decoder = CreateCopyFormatDecoder(byteSource, tupleDescriptor, copyOptions);
@@ -128,21 +131,56 @@ TupleCodecTypeFromString(char *codecString)
 	{
 		return TUPLE_CODEC_CSV;
 	}
-	else if (strcmp(codecString, "text") == 0)
+	else if (strcmp(codecString, "tsv") == 0)
 	{
-		return TUPLE_CODEC_TEXT;
+		return TUPLE_CODEC_TSV;
 	}
 	else if (strcmp(codecString, "binary") == 0)
 	{
 		return TUPLE_CODEC_BINARY;
 	}
 	else if (strcmp(codecString, "json") == 0 ||
-	         strcmp(codecString, "fulltext") == 0)
+	         strcmp(codecString, "xml") == 0 ||
+	         strcmp(codecString, "text") == 0)
 	{
 		return TUPLE_CODEC_FULL_TEXT;
 	}
 	else
 	{
 		ereport(ERROR, (errmsg("invalid decoder: %s", codecString)));
+	}
+}
+
+
+/*
+ * CopyFormatFromCodecType returns the copy format for the given codec
+ * type.
+ */
+static char *
+CopyFormatFromCodecType(TupleCodecType codecType)
+{
+	switch (codecType)
+	{
+		case TUPLE_CODEC_BINARY:
+		{
+			return "binary";
+		}
+
+		case TUPLE_CODEC_CSV:
+		{
+			return "csv";
+		}
+
+		case TUPLE_CODEC_TSV:
+		{
+			return "text";
+		}
+
+		default:
+		{
+			ereport(ERROR, (errmsg("codec type %d is not handled by COPY logic",
+			                       codecType)));
+		}
+
 	}
 }

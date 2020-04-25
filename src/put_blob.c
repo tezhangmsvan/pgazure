@@ -119,22 +119,7 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		if (strcmp(encoderString, "auto") == 0)
 		{
 			/* TODO: look at the content-type / content-encoding */
-			if (HasSuffix(path, ".csv") || HasSuffix(path, ".csv.gz"))
-			{
-				encoderString = "csv";
-			}
-			else if (HasSuffix(path, ".tsv") || HasSuffix(path, ".tsv.gz"))
-			{
-				encoderString = "text";
-			}
-			else if (HasSuffix(path, ".json") || HasSuffix(path, ".json.gz"))
-			{
-				encoderString = "json";
-			}
-			else
-			{
-				encoderString = "csv";
-			}
+			encoderString = CodecStringFromFileName(path);
 		}
 
 		TupleEncoder *encoder = BuildTupleEncoder(encoderString,

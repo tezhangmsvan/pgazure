@@ -12,6 +12,7 @@
 #define BLOB_STORAGE_UTILS_H
 
 
+char * CodecStringFromFileName(char *path);
 bool HasSuffix(const char *filename, const char *suffix);
 
 

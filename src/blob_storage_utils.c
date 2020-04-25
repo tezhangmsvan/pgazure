@@ -4,6 +4,36 @@
 
 
 /*
+ * CodecStringFromFileName tries to guess the encoder/decoder string
+ * from the suffix of a file name.
+ */
+char *
+CodecStringFromFileName(char *path)
+{
+	if (HasSuffix(path, ".csv") || HasSuffix(path, ".csv.gz"))
+	{
+		return "csv";
+	}
+	else if (HasSuffix(path, ".tsv") || HasSuffix(path, ".tsv.gz"))
+	{
+		return "tsv";
+	}
+	else if (HasSuffix(path, ".json") || HasSuffix(path, ".json.gz"))
+	{
+		return  "json";
+	}
+	else if (HasSuffix(path, ".xml") || HasSuffix(path, ".xml.gz"))
+	{
+		return  "xml";
+	}
+	else
+	{
+		return "csv";
+	}
+}
+
+
+/*
  * HasSuffix determines whether a filename ends in the given suffix.
  */
 bool

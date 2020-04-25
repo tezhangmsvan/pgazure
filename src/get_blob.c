@@ -166,7 +166,7 @@ ReadBlockBlobIntoTuplestore(char *connectionString, char *containerName, char *p
 	if (strcmp(decoderString, "auto") == 0)
 	{
 		/* TODO: look at the content-type */
-		decoderString = "csv";
+		decoderString = CodecStringFromFileName(path);
 	}
 
 	TupleDecoder *decoder = BuildTupleDecoder(decoderString, tupleDescriptor,
