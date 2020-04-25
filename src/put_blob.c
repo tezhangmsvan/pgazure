@@ -20,6 +20,7 @@
 #include "pgazure/byte_io.h"
 #include "pgazure/codecs.h"
 #include "pgazure/compression.h"
+#include "pgazure/storage_account.h"
 #include "pgazure/zlib_compression.h"
 #include "storage/itemptr.h"
 #include "utils/builtins.h"
@@ -63,7 +64,7 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		MemoryContext aggContext;
 		MemoryContext oldContext;
 
-		char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(1));
+		char *accountString = text_to_cstring(PG_GETARG_TEXT_P(1));
 		char *containerName = text_to_cstring(PG_GETARG_TEXT_P(2));
 		char *path = text_to_cstring(PG_GETARG_TEXT_P(3));
 		char *encoderString = "auto";
@@ -94,6 +95,8 @@ blob_storage_put_blob_sfunc(PG_FUNCTION_ARGS)
 		int natts = aggregateState->tupleDescriptor->natts;
 		aggregateState->values = palloc(natts * sizeof(Datum));
 		aggregateState->nulls = (bool *) palloc(natts * sizeof(bool));
+
+		char *connectionString = AccountStringToConnectionString(accountString);
 
 		ByteSink *byteSink = palloc0(sizeof(ByteSink));
 		WriteBlockBlob(connectionString, containerName, path, byteSink);

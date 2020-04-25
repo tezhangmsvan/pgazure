@@ -18,6 +18,7 @@
 #include "pgazure/compression.h"
 #include "pgazure/copy_format_decoder.h"
 #include "pgazure/set_returning_functions.h"
+#include "pgazure/storage_account.h"
 #include "pgazure/zlib_compression.h"
 #include "utils/builtins.h"
 
@@ -65,7 +66,7 @@ blob_storage_get_blob(PG_FUNCTION_ARGS)
 		ereport(ERROR, (errmsg("compression argument is required")));
 	}
 
-	char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(0));
+	char *accountString = text_to_cstring(PG_GETARG_TEXT_P(0));
 	char *containerName = text_to_cstring(PG_GETARG_TEXT_P(1));
 	char *path = text_to_cstring(PG_GETARG_TEXT_P(2));
 	char *decoderString = text_to_cstring(PG_GETARG_TEXT_P(3));
@@ -73,6 +74,8 @@ blob_storage_get_blob(PG_FUNCTION_ARGS)
 
 	TupleDesc tupleDescriptor = NULL;
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
+
+	char *connectionString = AccountStringToConnectionString(accountString);
 
 	ReadBlockBlobIntoTuplestore(connectionString, containerName, path, decoderString,
 	                            compressionString, tupleStore, tupleDescriptor);
@@ -112,7 +115,7 @@ blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)
 		ereport(ERROR, (errmsg("compression argument is required")));
 	}
 
-	char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(0));
+	char *accountString  = text_to_cstring(PG_GETARG_TEXT_P(0));
 	char *containerName = text_to_cstring(PG_GETARG_TEXT_P(1));
 	char *path = text_to_cstring(PG_GETARG_TEXT_P(2));
 	char *decoderString = text_to_cstring(PG_GETARG_TEXT_P(4));
@@ -121,6 +124,8 @@ blob_storage_get_blob_anyelement(PG_FUNCTION_ARGS)
 	Oid typeId = get_fn_expr_argtype(fcinfo->flinfo, 3);
 	TupleDesc tupleDescriptor = TypeGetTupleDesc(typeId, NIL);
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
+
+	char *connectionString = AccountStringToConnectionString(accountString);
 
 	ReadBlockBlobIntoTuplestore(connectionString, containerName, path, decoderString,
 	                            compressionString, tupleStore, tupleDescriptor);

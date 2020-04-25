@@ -16,6 +16,7 @@
 #include "access/tupdesc.h"
 #include "pgazure/blob_storage.h"
 #include "pgazure/set_returning_functions.h"
+#include "pgazure/storage_account.h"
 #include "storage/itemptr.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
@@ -76,12 +77,14 @@ static void AddBlobToTupleStore(void *context, CloudBlob *blob);
 Datum
 blob_storage_list_blobs(PG_FUNCTION_ARGS)
 {
-	char *connectionString = text_to_cstring(PG_GETARG_TEXT_P(0));
+	char *accountString = text_to_cstring(PG_GETARG_TEXT_P(0));
 	char *containerName = text_to_cstring(PG_GETARG_TEXT_P(1));
 	char *prefix = text_to_cstring(PG_GETARG_TEXT_P(2));
 	TupleDesc tupleDescriptor = NULL;
 	Tuplestorestate *tupleStore = SetupTuplestore(fcinfo, &tupleDescriptor);
     int columnCount = tupleDescriptor->natts;
+
+	char *connectionString = AccountStringToConnectionString(accountString);
 
 	struct ListBlobsReceiver receiver;
 	receiver.tupleStore = tupleStore;
