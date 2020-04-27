@@ -9,9 +9,9 @@
 
 
 #include "postgres.h"
-
-#include "distributed/tuplestore.h"
 #include "miscadmin.h"
+
+#include "pgazure/set_returning_functions.h"
 
 
 /*
