@@ -10,6 +10,7 @@
 #include "postgres.h"
 #include "fmgr.h"
 #include "miscadmin.h"
+#include "utils/memutils.h"
 
 #include "commands/copy.h"
 #include "executor/executor.h"

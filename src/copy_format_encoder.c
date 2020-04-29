@@ -26,6 +26,7 @@
 #include "pgazure/copy_utils.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 #include "utils/rel.h"
 
 
