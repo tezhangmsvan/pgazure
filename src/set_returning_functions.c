@@ -73,15 +73,14 @@ CheckTuplestoreReturn(FunctionCallInfo fcinfo, TupleDesc *tupdesc)
 Tuplestorestate *
 SetupTuplestore(FunctionCallInfo fcinfo, TupleDesc *tupleDescriptor)
 {
-	TupleDesc returnDescriptor = NULL;
-	ReturnSetInfo *resultSet = CheckTuplestoreReturn(fcinfo, &returnDescriptor);
+	ReturnSetInfo *resultSet = CheckTuplestoreReturn(fcinfo, tupleDescriptor);
 	MemoryContext perQueryContext = resultSet->econtext->ecxt_per_query_memory;
 
 	MemoryContext oldContext = MemoryContextSwitchTo(perQueryContext);
 	Tuplestorestate *tupstore = tuplestore_begin_heap(true, false, work_mem);
 	resultSet->returnMode = SFRM_Materialize;
 	resultSet->setResult = tupstore;
-	resultSet->setDesc = *tupleDescriptor != NULL ? *tupleDescriptor : returnDescriptor;
+	resultSet->setDesc = *tupleDescriptor;
 	MemoryContextSwitchTo(oldContext);
 
 	return tupstore;
